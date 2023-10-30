@@ -1,11 +1,36 @@
 package chucknorris
 
+import java.util.InputMismatchException
+
 fun main() {
-    println("Input string:")
-    val input = readln()
-    println()
-    println("The result:")
-    println(binStrToString(chuckStrToBinStr(input)))
+    while (true) {
+        println()
+        println("Please input operation (encode/decode/exit):")
+        when(val choice = readln()) {
+           "encode" -> {
+               println("Input string:")
+               val input = readln()
+               println("Encoded string:")
+               println(binStrToChuckStr(stringToBinStr(input)))
+           }
+           "decode" -> {
+               println("Input encoded string:")
+               val input = readln()
+               try {
+                   val binaryResult = binStrToString(chuckStrToBinStr(input))
+                   println("Decoded string:")
+                   println(binaryResult)
+               } catch(ie: InputMismatchException) {
+                   println("Encoded string is not valid.")
+               }
+           }
+           "exit" -> {
+               println("Bye!")
+               return
+           }
+           else -> println("There is no '$choice' operation")
+        }
+    }
 }
 
 fun binStrToChuckStr(binStr: String): String {
@@ -17,13 +42,37 @@ fun binStrToChuckStr(binStr: String): String {
 }
 
 fun chuckStrToBinStr(chuckStr: String): String {
-    return "0{1,2}\\s0+".toRegex().findAll(chuckStr)
-        .map { it.value }
-        .map { val pair = it.split(" "); pair.first() to pair.last() }
-        .map {
-            if (it.first.length == 1) "1".repeat(it.second.length)
-            else "0".repeat(it.second.length)
-        }.joinToString("")
+    val trimmedChuckStr = chuckStr.trim()
+    if (trimmedChuckStr.contains("[^0\\s]".toRegex()))
+        throw InputMismatchException("input contains characters other than 0 or space")
+
+    val sequences = chuckStrToPairs(trimmedChuckStr)
+
+    return sequencesToBinary(sequences)
+}
+
+private fun chuckStrToPairs(chuckStr: String): Sequence<Pair<String, String>> {
+    val sequences = "0+\\s0+".toRegex().findAll(chuckStr).map { it.value }
+    if (sequences.joinToString(" ") != chuckStr) throw InputMismatchException("odd pairing")
+    val blocks = sequences.map { val pair = it.split(" "); pair.first() to pair.last() }
+
+    blocks.forEach {
+        if (!(it.first == "0" || it.first == "00"))
+            throw InputMismatchException("each sequence must start with a 0 or 00")
+    }
+
+    return blocks
+}
+
+private fun sequencesToBinary(sequences: Sequence<Pair<String, String>>): String {
+    val binary = sequences.map {
+        if (it.first.length == 1) "1".repeat(it.second.length)
+        else "0".repeat(it.second.length)
+    }.joinToString("")
+
+    if (binary.length % 7 != 0) throw InputMismatchException("binary string must be a multiple of 7")
+
+    return binary
 }
 
 
